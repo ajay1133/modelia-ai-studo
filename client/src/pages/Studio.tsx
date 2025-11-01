@@ -1,20 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { GenerationWorkspace } from "@/components/GenerationWorkspace";
-import { GenerationHistory, Generation } from "@/components/GenerationHistory";
+import { GenerationHistory, Generation as UIGeneration } from "@/components/GenerationHistory";
 import { ErrorModal } from "@/components/ErrorModal";
-import exampleImage1 from "@assets/generated_images/Example_generation_1_d7c4356f.png";
-import exampleImage2 from "@assets/generated_images/Example_generation_2_f76f043e.png";
-import exampleImage3 from "@assets/generated_images/Example_generation_3_fd5c446a.png";
-import exampleImage4 from "@assets/generated_images/Example_generation_4_c15915e6.png";
-import exampleImage5 from "@assets/generated_images/Example_generation_5_61b7a8b1.png";
+import { generationService, ApiError } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface StudioProps {
   username: string;
   onLogout: () => void;
 }
-
-const mockImages = [exampleImage1, exampleImage2, exampleImage3, exampleImage4, exampleImage5];
 
 export default function Studio({ username, onLogout }: StudioProps) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -26,76 +21,98 @@ export default function Studio({ username, onLogout }: StudioProps) {
     style: string;
     image: File | null;
   } | null>(null);
-  
-  const [generations, setGenerations] = useState<Generation[]>([
-    {
-      id: "1",
-      imageUrl: exampleImage1,
-      prompt: "A serene mountain landscape at sunset with purple skies",
-      style: "realistic",
-      timestamp: new Date(Date.now() - 1000 * 60 * 5),
-    },
-    {
-      id: "2",
-      imageUrl: exampleImage2,
-      prompt: "Futuristic cyberpunk city with neon lights",
-      style: "cyberpunk",
-      timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    },
-    {
-      id: "3",
-      imageUrl: exampleImage3,
-      prompt: "Abstract flowing liquid metal forms in purple and silver",
-      style: "abstract",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60),
-    },
-  ]);
+  const [generations, setGenerations] = useState<UIGeneration[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const { toast } = useToast();
 
-  const simulateGeneration = (prompt: string, style: string, image: File | null) => {
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const history = await generationService.getHistory();
+      const mapped = history.map((gen) => ({
+        id: gen.id,
+        imageUrl: gen.imageUrl,
+        prompt: gen.prompt,
+        style: gen.style,
+        timestamp: new Date(gen.createdAt),
+      }));
+      setGenerations(mapped);
+    } catch (error) {
+      console.error("Failed to load history:", error);
+    }
+  };
+
+  const handleGenerate = async (prompt: string, style: string, image: File | null) => {
+    setPendingGeneration({ prompt, style, image });
     setIsGenerating(true);
     setGeneratedImage(null);
 
-    const shouldFail = Math.random() < 0.2;
+    abortControllerRef.current = new AbortController();
 
-    setTimeout(() => {
-      if (shouldFail) {
+    try {
+      const result = await generationService.generate(
+        prompt,
+        style,
+        image,
+        abortControllerRef.current.signal
+      );
+
+      setGeneratedImage(result.imageUrl);
+      setIsGenerating(false);
+
+      const newGeneration: UIGeneration = {
+        id: result.id,
+        imageUrl: result.imageUrl,
+        prompt: result.prompt,
+        style: result.style,
+        timestamp: new Date(result.createdAt),
+      };
+
+      setGenerations((prev) => [newGeneration, ...prev].slice(0, 5));
+
+      toast({
+        title: "Generation complete",
+        description: "Your artwork has been created!",
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
         setIsGenerating(false);
-        setErrorMessage(
-          "Our AI models are currently experiencing high demand. Please try again in a moment."
-        );
+        toast({
+          title: "Generation aborted",
+          description: "The generation was cancelled",
+        });
+        return;
+      }
+
+      if (error instanceof ApiError) {
+        setIsGenerating(false);
+        setErrorMessage(error.message);
         setShowError(true);
       } else {
-        const randomImage = mockImages[Math.floor(Math.random() * mockImages.length)];
-        setGeneratedImage(randomImage);
         setIsGenerating(false);
-
-        const newGeneration: Generation = {
-          id: Date.now().toString(),
-          imageUrl: randomImage,
-          prompt,
-          style,
-          timestamp: new Date(),
-        };
-
-        setGenerations((prev) => [newGeneration, ...prev].slice(0, 5));
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred",
+          variant: "destructive",
+        });
       }
-    }, 3000);
-  };
-
-  const handleGenerate = (prompt: string, style: string, image: File | null) => {
-    setPendingGeneration({ prompt, style, image });
-    simulateGeneration(prompt, style, image);
+    }
   };
 
   const handleAbort = () => {
-    setIsGenerating(false);
-    console.log("Generation aborted");
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
   };
 
   const handleRetry = () => {
     setShowError(false);
     if (pendingGeneration) {
-      simulateGeneration(
+      handleGenerate(
         pendingGeneration.prompt,
         pendingGeneration.style,
         pendingGeneration.image
@@ -103,9 +120,12 @@ export default function Studio({ username, onLogout }: StudioProps) {
     }
   };
 
-  const handleSelectGeneration = (generation: Generation) => {
-    console.log("Selected generation:", generation);
+  const handleSelectGeneration = (generation: UIGeneration) => {
     setGeneratedImage(generation.imageUrl);
+    toast({
+      title: "Generation restored",
+      description: "Previous work loaded in workspace",
+    });
   };
 
   return (
