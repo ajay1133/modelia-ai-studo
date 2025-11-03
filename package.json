@@ -14,6 +14,10 @@
     "test:client": "jest --config=jest.client.config.cjs",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch"
   },
+  "engines": {
+    "npm": ">=8.0.0 <12.0.0",
+    "node": ">=22.0.0 <25.0.0"
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
