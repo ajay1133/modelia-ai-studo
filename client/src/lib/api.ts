@@ -90,18 +90,32 @@ class GenerationService {
     image: File | null,
     signal?: AbortSignal
   ): Promise<Generation> {
-    const formData = new FormData();
-    formData.append("prompt", prompt);
-    formData.append("style", style);
+    let headers = this.auth.getHeaders();
+    let body: FormData | URLSearchParams;
+    
     if (image) {
-      formData.append("image", image);
+      // Use multipart/form-data only when we have a file
+      body = new FormData();
+      body.append("prompt", prompt);
+      body.append("style", style);
+      body.append("image", image);
+    } else {
+      // Use URL-encoded form data when no file
+      headers = {
+        ...headers,
+        "Content-Type": "application/x-www-form-urlencoded",
+      };
+      body = new URLSearchParams();
+      body.append("prompt", prompt);
+      body.append("style", style);
     }
 
     const response = await fetch(`${API_BASE}/api/generate`, {
       method: "POST",
-      headers: this.auth.getHeaders(),
-      body: formData,
+      headers,
+      body,
       signal,
+      keepalive: true, // Keep connection alive during the delay
     });
 
     if (!response.ok) {

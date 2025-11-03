@@ -1,7 +1,7 @@
 import request from "supertest";
 import express from "express";
 import { registerRoutes } from "../routes";
-import { storage } from "../storage";
+import { storage, MemStorage, setStorage } from "../storage";
 import { hashPassword, generateToken } from "../auth";
 import path from "path";
 import fs from "fs";
@@ -12,14 +12,18 @@ describe("Generation API", () => {
   let userId: string;
 
   beforeAll(async () => {
+  // Use in-memory storage for tests
+  setStorage(new MemStorage());
+
     app = express();
     app.use(express.json());
     await registerRoutes(app);
   });
 
   beforeEach(async () => {
-    (storage as any).users.clear();
-    (storage as any).generations.clear();
+    // clear in-memory maps
+    if ((storage as any).users) (storage as any).users.clear();
+    if ((storage as any).generations) (storage as any).generations.clear();
 
     const hashedPassword = await hashPassword("password123");
     const user = await storage.createUser({
@@ -31,7 +35,7 @@ describe("Generation API", () => {
   });
 
   describe("POST /api/generate", () => {
-    it("should generate an image with valid prompt and style", async () => {
+  it("should generate an image with valid prompt and style", async () => {
       let attempts = 0;
       let success = false;
       
@@ -52,6 +56,9 @@ describe("Generation API", () => {
           expect(response.body.error).toContain("high demand");
           expect(response.body.retryable).toBe(true);
           attempts++;
+        } else if (response.status === 499) {
+          // client disconnected/aborted; retry
+          attempts++;
         } else {
           throw new Error(`Unexpected status: ${response.status}`);
         }
@@ -60,8 +67,8 @@ describe("Generation API", () => {
       expect(success).toBe(true);
     });
 
-    it("should generate with uploaded image", async () => {
-      const testImagePath = path.join(__dirname, "test-image.png");
+  it("should generate with uploaded image", async () => {
+  const testImagePath = path.join(process.cwd(), "server", "__tests__", "test-image.png");
       fs.writeFileSync(testImagePath, Buffer.from("fake image data"));
 
       let attempts = 0;

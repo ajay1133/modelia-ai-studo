@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 
 interface StyleOption {
   id: string;
@@ -20,21 +20,20 @@ const styles: StyleOption[] = [
 
 export function StyleSelector({ selectedStyle, onStyleChange }: StyleSelectorProps) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {styles.map((style) => (
-        <Card
-          key={style.id}
-          className={`
-            p-4 cursor-pointer transition-all hover-elevate
-            ${selectedStyle === style.id ? "border-2 border-primary" : ""}
-          `}
-          onClick={() => onStyleChange(style.id)}
-          data-testid={`style-option-${style.id}`}
-        >
-          <h4 className="font-semibold mb-1">{style.name}</h4>
-          <p className="text-xs text-muted-foreground">{style.description}</p>
-        </Card>
-      ))}
-    </div>
+    <Select value={selectedStyle} onValueChange={onStyleChange}>
+      <SelectTrigger className="w-full" data-testid="style-dropdown">
+        <SelectValue placeholder="Select style" />
+      </SelectTrigger>
+      <SelectContent>
+        {styles.map((style) => (
+          <SelectItem key={style.id} value={style.id} data-testid={`style-option-${style.id}`}>
+            <div>
+              <div className="font-semibold">{style.name}</div>
+              <div className="text-xs text-muted-foreground">{style.description}</div>
+            </div>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

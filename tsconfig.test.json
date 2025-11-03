@@ -1,9 +1,18 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["jest", "node"],
+    "types": ["jest", "node", "@testing-library/jest-dom"],
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react-jsx"
   },
-  "include": ["server/**/*.ts", "shared/**/*.ts", "server/**/__tests__/**/*.ts"]
+  "include": [
+    "server/**/*.ts", 
+    "shared/**/*.ts", 
+    "server/**/__tests__/**/*.ts",
+    "client/src/**/*.ts",
+    "client/src/**/*.tsx",
+    "client/src/**/__tests__/**/*.ts",
+    "client/src/**/__tests__/**/*.tsx"
+  ]
 }

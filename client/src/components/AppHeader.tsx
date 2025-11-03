@@ -15,7 +15,7 @@ export function AppHeader({ username, onLogout }: AppHeaderProps) {
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
             <Sparkles className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold">AI Studio</span>
+          <span className="text-xl font-bold">Modelia AI Studio</span>
         </div>
 
         <div className="flex items-center gap-2">

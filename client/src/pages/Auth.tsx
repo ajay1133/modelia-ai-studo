@@ -18,7 +18,7 @@ export default function Auth({ onLogin }: AuthProps) {
         onLogin(result.user.username);
         toast({
           title: "Account created",
-          description: "Welcome to AI Studio!",
+          description: "Welcome to Modelia AI Studio!",
         });
       } else {
         const result = await authService.login({ username, password });

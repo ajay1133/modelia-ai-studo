@@ -1,6 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 
@@ -67,15 +70,24 @@ app.use((req, res, next) => {
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
+  // Other ports are firewall-ed. Default to 5000 if not specified.
   // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  // It is the only port that is not firewall-ed.
+  const port = Number.parseInt(process.env.PORT || '5000', 10);
+  try {
+    // On Windows 'reusePort' is not supported and will throw ENOTSUP.
+    // Only set reusePort on non-Windows platforms.
+    const listenOptions: Record<string, any> = { port, host: "0.0.0.0" };
+    if (process.platform === "win32") {
+      log("[server] running on win32 - skipping reusePort option to avoid ENOTSUP");
+    } else {
+      listenOptions.reusePort = true;
+    }
+
+    server.listen(listenOptions, () => {
+      log(`serving on port ${port}`);
+    });
+  } catch (e) {
+    console.log(`Error listening to server on port ${port} = `, e);
+  }
 })();

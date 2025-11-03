@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, parseISO } from "date-fns";
 
 interface GenerationHistoryItemProps {
   id: string;
@@ -32,7 +32,13 @@ export function GenerationHistoryItem({
         {prompt}
       </p>
       <p className="text-xs text-muted-foreground">
-        {formatDistanceToNow(timestamp, { addSuffix: true })}
+        {formatDistanceToNow(
+          typeof timestamp === 'string' ? parseISO(timestamp) : timestamp,
+          { 
+            addSuffix: true,
+            includeSeconds: true
+          }
+        )}
       </p>
     </Card>
   );

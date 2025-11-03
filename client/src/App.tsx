@@ -16,8 +16,16 @@ function Router() {
   const [user, setUser] = useState<string | null>(null);
 
   useEffect(() => {
-    if (authService.isAuthenticated() && window.location.pathname === "/studio") {
-      setUser("user");
+    const token = authService.getToken();
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token.split('.')[1]));
+        if (decoded?.username && window?.location?.pathname === "/studio") {
+          setUser(decoded.username);
+        }
+      } catch (e) {
+        console.error('Failed to decode token:', e);
+      }
     }
   }, []);
 

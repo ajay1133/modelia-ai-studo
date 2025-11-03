@@ -28,7 +28,7 @@ export function AuthForm({ mode, onSubmit, onToggleMode }: AuthFormProps) {
             <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
               <Sparkles className="h-6 w-6 text-primary-foreground" />
             </div>
-            <span className="text-2xl font-bold">AI Studio</span>
+            <span className="text-2xl font-bold">Modelia AI Studio</span>
           </div>
           <CardTitle className="text-3xl">
             {mode === "login" ? "Welcome back" : "Create your account"}

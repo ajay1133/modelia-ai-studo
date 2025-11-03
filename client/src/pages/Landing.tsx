@@ -22,7 +22,7 @@ export default function Landing({ onGetStarted }: LandingProps) {
             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">AI Studio</span>
+            <span className="text-xl font-bold">Modelia AI Studio</span>
           </div>
           <ThemeToggle />
         </div>
@@ -80,7 +80,7 @@ export default function Landing({ onGetStarted }: LandingProps) {
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4">Example Creations</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                See what you can create with AI Studio
+                See what you can create with Modelia AI Studio
               </p>
             </div>
 
@@ -107,7 +107,7 @@ export default function Landing({ onGetStarted }: LandingProps) {
               Ready to Create Amazing Art?
             </h2>
             <p className="text-lg text-muted-foreground mb-8">
-              Join thousands of creators using AI Studio to bring their ideas to life
+              Join thousands of creators using Modelia AI Studio to bring their ideas to life
             </p>
             <Button 
               size="lg" 
@@ -124,7 +124,7 @@ export default function Landing({ onGetStarted }: LandingProps) {
           <div className="mx-auto max-w-6xl">
             <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
               <Sparkles className="h-4 w-4" />
-              <span>© 2025 AI Studio. All rights reserved.</span>
+              <span>© 2025 Modelia AI Studio. All rights reserved.</span>
             </div>
           </div>
         </footer>

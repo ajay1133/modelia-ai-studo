@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserSchema, loginSchema, insertGenerationSchema } from "@shared/schema";
 import { hashPassword, verifyPassword, generateToken, authMiddleware, type AuthRequest } from "./auth";
+import { log } from "./vite";
 import multer from "multer";
 import { randomUUID } from "crypto";
 import path from "path";
@@ -31,15 +32,34 @@ const upload = multer({
   },
 });
 
-const mockGeneratedImages = [
-  "/api/mock-images/example1.png",
-  "/api/mock-images/example2.png",
-  "/api/mock-images/example3.png",
-  "/api/mock-images/example4.png",
-  "/api/mock-images/example5.png",
-];
+const getAllFilePaths = (folderPath: string) => {
+  let filePaths: any[] = [];
+  const entries = fs.readdirSync(folderPath);
+
+  for (const entry of entries) {
+    const entryPath = path.join(folderPath, entry);
+    const stats = fs.statSync(entryPath);
+
+    if (stats.isFile()) {
+      filePaths.push(entryPath);
+    } else if (stats.isDirectory()) {
+      filePaths = filePaths.concat(getAllFilePaths(entryPath)); // Recursively call for subdirectories
+    }
+  }
+  return filePaths;
+}
+
+const __dirname = path.resolve();
+const filePaths = getAllFilePaths(
+  path.join(__dirname, "attached_assets/generated_images")
+);
+const mockGeneratedImages: string[] = [];
+for (const filePath of filePaths) {
+  mockGeneratedImages.push(`@fs/${filePath}`);
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  const isTestEnv = process.env.NODE_ENV === 'test' || typeof process.env.JEST_WORKER_ID !== 'undefined';
   app.post("/api/auth/signup", async (req, res) => {
     try {
       const validatedData = insertUserSchema.parse(req.body);
@@ -100,45 +120,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post(
     "/api/generate",
     authMiddleware,
-    upload.single("image"),
+    (req: AuthRequest, res, next) => {
+      // Make file upload optional by wrapping multer in custom middleware
+      if (!req.is('multipart/form-data')) {
+        // If not multipart form, skip multer
+        return next();
+      }
+      upload.single("image")(req, res, next);
+    },
     async (req: AuthRequest, res) => {
       try {
+        log(`[generate] Starting generation for user ${req.user!.id}`);
+        // Log if no image is provided
+        if (!req.file) {
+          log(`[generate] No image uploaded with request`);
+        }
         const validatedData = insertGenerationSchema.parse({
           userId: req.user!.id,
           prompt: req.body.prompt,
           style: req.body.style,
           imageUrl: "",
-          uploadedImage: req.file ? `/uploads/${req.file.filename}` : null,
+          uploadedImage: req.file ? `/uploads/${req.file.filename}` : undefined,
         });
+        log(`[generate] Validated input, prompt: "${validatedData.prompt}", style: ${validatedData.style}, uploadedImage: ${validatedData.uploadedImage}`);
 
         if (Math.random() < 0.2) {
+          log(`[generate] Simulated error - high demand`);
           return res.status(503).json({ 
             error: "Our AI models are currently experiencing high demand. Please try again in a moment.",
             retryable: true,
           });
         }
 
-        let aborted = false;
-        req.on("close", () => {
-          aborted = true;
-        });
-
+        log(`[generate] Starting mock generation delay (2s)`);
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        if (aborted || req.destroyed) {
-          return;
-        }
-
         const randomImage = mockGeneratedImages[Math.floor(Math.random() * mockGeneratedImages.length)];
+        log(`[generate] Selected mock image: ${randomImage}`);
         
         const generation = await storage.createGeneration({
           ...validatedData,
           imageUrl: randomImage,
         });
+        log(`[generate] Stored generation with ID: ${generation.id}`);
 
-        if (!aborted && !req.destroyed) {
-          res.json(generation);
-        }
+        log(`[generate] Sending successful response`);
+        return res.json(generation);
       } catch (error: any) {
         if (error.errors) {
           return res.status(400).json({ error: error.errors[0].message });

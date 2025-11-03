@@ -1,21 +1,25 @@
 import request from "supertest";
 import express from "express";
 import { registerRoutes } from "../routes";
-import { storage } from "../storage";
+import { storage, MemStorage, setStorage } from "../storage";
 import { hashPassword } from "../auth";
 
 describe("Authentication API", () => {
   let app: express.Express;
 
   beforeAll(async () => {
+  // Use in-memory storage for tests
+  setStorage(new MemStorage());
+
     app = express();
     app.use(express.json());
     await registerRoutes(app);
   });
 
   afterEach(async () => {
-    (storage as any).users.clear();
-    (storage as any).generations.clear();
+    // clear in-memory maps
+    if ((storage as any).users) (storage as any).users.clear();
+    if ((storage as any).generations) (storage as any).generations.clear();
   });
 
   describe("POST /api/auth/signup", () => {

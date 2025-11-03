@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -8,42 +7,39 @@ import { Sparkles, X, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 interface GenerationWorkspaceProps {
-  onGenerate: (prompt: string, style: string, image: File | null) => void;
+  prompt: string;
+  setPrompt: (p: string) => void;
+  style: string;
+  setStyle: (s: string) => void;
+  uploadedImage: File | null;
+  uploadPreview: string | null;
+  onImageSelect: (file: File) => void;
+  onClearImage: () => void;
+  onGenerate: () => void;
   isGenerating: boolean;
   generatedImage: string | null;
   onAbort: () => void;
+  retryCount: number;
+  retryLimit: number;
 }
 
-export function GenerationWorkspace({ 
-  onGenerate, 
-  isGenerating, 
+
+export function GenerationWorkspace({
+  prompt,
+  setPrompt,
+  style,
+  setStyle,
+  uploadedImage,
+  uploadPreview,
+  onImageSelect,
+  onClearImage,
+  onGenerate,
+  isGenerating,
   generatedImage,
-  onAbort 
+  onAbort,
+  retryCount,
+  retryLimit,
 }: GenerationWorkspaceProps) {
-  const [prompt, setPrompt] = useState("");
-  const [style, setStyle] = useState("realistic");
-  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
-  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
-
-  const handleImageSelect = (file: File) => {
-    setUploadedImage(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setUploadPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleClearImage = () => {
-    setUploadedImage(null);
-    setUploadPreview(null);
-  };
-
-  const handleGenerate = () => {
-    if (prompt.trim()) {
-      onGenerate(prompt, style, uploadedImage);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -68,9 +64,9 @@ export function GenerationWorkspace({
             Upload Reference Image (Optional)
           </Label>
           <ImageUpload
-            onImageSelect={handleImageSelect}
+            onImageSelect={onImageSelect}
             selectedImage={uploadPreview}
-            onClearImage={handleClearImage}
+            onClearImage={onClearImage}
           />
         </div>
 
@@ -87,8 +83,8 @@ export function GenerationWorkspace({
         <Button
           className="w-full"
           size="lg"
-          onClick={handleGenerate}
-          disabled={isGenerating || !prompt.trim()}
+          onClick={onGenerate}
+          disabled={isGenerating || !prompt.trim() || retryCount >= retryLimit}
           data-testid="button-generate"
         >
           {isGenerating ? (
@@ -99,7 +95,7 @@ export function GenerationWorkspace({
           ) : (
             <>
               <Sparkles className="mr-2 h-5 w-5" />
-              Generate
+              {retryCount < retryLimit ? "Generate" : "Retry limit reached"}
             </>
           )}
         </Button>

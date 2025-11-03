@@ -1,4 +1,4 @@
-# AI Studio Design Guidelines
+# Modelia AI Studio Design Guidelines
 
 ## Design Approach
 

@@ -38,6 +38,7 @@ export const insertGenerationSchema = createInsertSchema(generations).omit({
 }).extend({
   prompt: z.string().min(1, "Prompt is required").max(1000),
   style: z.enum(["realistic", "artistic", "abstract", "cyberpunk"]),
+  uploadedImage: z.string().optional().nullable(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

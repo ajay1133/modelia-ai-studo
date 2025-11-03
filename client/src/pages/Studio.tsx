@@ -12,6 +12,12 @@ interface StudioProps {
 }
 
 export default function Studio({ username, onLogout }: StudioProps) {
+  const [prompt, setPrompt] = useState("");
+  const [style, setStyle] = useState("realistic");
+  const [uploadedImage, setUploadedImage] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const retryLimit = 3;
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [showError, setShowError] = useState(false);
@@ -27,6 +33,14 @@ export default function Studio({ username, onLogout }: StudioProps) {
 
   useEffect(() => {
     loadHistory();
+    
+    // Cleanup function to abort any pending requests when component unmounts
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
   }, []);
 
   const loadHistory = async () => {
@@ -37,7 +51,7 @@ export default function Studio({ username, onLogout }: StudioProps) {
         imageUrl: gen.imageUrl,
         prompt: gen.prompt,
         style: gen.style,
-        timestamp: new Date(gen.createdAt),
+        timestamp: gen.createdAt,
       }));
       setGenerations(mapped);
     } catch (error) {
@@ -45,54 +59,83 @@ export default function Studio({ username, onLogout }: StudioProps) {
     }
   };
 
-  const handleGenerate = async (prompt: string, style: string, image: File | null) => {
-    setPendingGeneration({ prompt, style, image });
+  const handleImageSelect = (file: File) => {
+    setUploadedImage(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUploadPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleClearImage = () => {
+    setUploadedImage(null);
+    setUploadPreview(null);
+  };
+
+  const handleGenerate = async () => {
+    if (!prompt.trim() || isGenerating || retryCount >= retryLimit) return;
+    
+    // Clean up any existing abort controller
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    setPendingGeneration({ prompt, style, image: uploadedImage });
     setIsGenerating(true);
     setGeneratedImage(null);
-
+    
+    // Create new abort controller
     abortControllerRef.current = new AbortController();
-
+    const currentController = abortControllerRef.current;
+    
     try {
       const result = await generationService.generate(
         prompt,
         style,
-        image,
-        abortControllerRef.current.signal
+        uploadedImage,
+        currentController.signal
       );
-
       setGeneratedImage(result.imageUrl);
       setIsGenerating(false);
-
+      setRetryCount(0); // Reset retry count on success
+      setPrompt("");
+      setStyle("realistic");
+      setUploadedImage(null);
+      setUploadPreview(null);
       const newGeneration: UIGeneration = {
         id: result.id,
         imageUrl: result.imageUrl,
         prompt: result.prompt,
         style: result.style,
-        timestamp: new Date(result.createdAt),
+        timestamp: result.createdAt,
       };
-
       setGenerations((prev) => [newGeneration, ...prev].slice(0, 5));
-
       toast({
         title: "Generation complete",
         description: "Your artwork has been created!",
       });
     } catch (error) {
+      setIsGenerating(false);
+      setRetryCount((prev) => prev + 1);
+      if (retryCount + 1 >= retryLimit) {
+        setPrompt("");
+        setStyle("realistic");
+        setUploadedImage(null);
+        setUploadPreview(null);
+        setRetryCount(0);
+      }
       if (error instanceof DOMException && error.name === "AbortError") {
-        setIsGenerating(false);
         toast({
           title: "Generation aborted",
           description: "The generation was cancelled",
         });
         return;
       }
-
       if (error instanceof ApiError) {
-        setIsGenerating(false);
         setErrorMessage(error.message);
         setShowError(true);
       } else {
-        setIsGenerating(false);
         toast({
           title: "Error",
           description: "An unexpected error occurred",
@@ -106,6 +149,11 @@ export default function Studio({ username, onLogout }: StudioProps) {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
+      setIsGenerating(false); // Immediately update UI state
+      toast({
+        title: "Generation cancelled",
+        description: "Image generation was cancelled",
+      });
     }
   };
 
@@ -135,10 +183,20 @@ export default function Studio({ username, onLogout }: StudioProps) {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 p-6">
         <div>
           <GenerationWorkspace
+            prompt={prompt}
+            setPrompt={setPrompt}
+            style={style}
+            setStyle={setStyle}
+            uploadedImage={uploadedImage}
+            uploadPreview={uploadPreview}
+            onImageSelect={handleImageSelect}
+            onClearImage={handleClearImage}
             onGenerate={handleGenerate}
             isGenerating={isGenerating}
             generatedImage={generatedImage}
             onAbort={handleAbort}
+            retryCount={retryCount}
+            retryLimit={retryLimit}
           />
         </div>
 
