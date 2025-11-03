@@ -109,8 +109,6 @@ Before running the application, ensure you have the following requirements met:
   - Check database user permissions
 
 - **Image Upload Problems**
-  - Verify file size is under 5MB
-  - Ensure file format is JPG or PNG
   - Check storage permissions in the uploads directory
 
 ## Support
