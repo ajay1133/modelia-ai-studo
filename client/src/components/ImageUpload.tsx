@@ -10,22 +10,51 @@ interface ImageUploadProps {
 
 export function ImageUpload({ onImageSelect, selectedImage, onClearImage }: ImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
-      onImageSelect(file);
+    if (!file) return;
+
+    // Validate type
+    const isJpg = file.type === 'image/jpeg' || file.type === 'image/jpg';
+    const isPng = file.type === 'image/png';
+    if (!isJpg && !isPng) {
+      setErrorMessage('Only JPG or PNG files are allowed');
+      return;
     }
+
+    // Validate size
+    if (file.size > MAX_SIZE) {
+      setErrorMessage('File is too large — maximum allowed size is 10MB');
+      return;
+    }
+
+    setErrorMessage(null);
+    onImageSelect(file);
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      onImageSelect(file);
+    if (!file) return;
+
+    const isJpg = file.type === 'image/jpeg' || file.type === 'image/jpg';
+    const isPng = file.type === 'image/png';
+    if (!isJpg && !isPng) {
+      setErrorMessage('Only JPG or PNG files are allowed');
+      return;
     }
+
+    if (file.size > MAX_SIZE) {
+      setErrorMessage('File is too large — maximum allowed size is 10MB');
+      return;
+    }
+
+    setErrorMessage(null);
+    onImageSelect(file);
   };
 
   if (selectedImage) {
@@ -78,6 +107,9 @@ export function ImageUpload({ onImageSelect, selectedImage, onClearImage }: Imag
       <p className="text-sm text-muted-foreground">
         PNG, JPG, or GIF up to 10MB
       </p>
+      {errorMessage && (
+        <p data-testid="upload-error" className="text-sm text-destructive mt-2">{errorMessage}</p>
+      )}
     </div>
   );
 }

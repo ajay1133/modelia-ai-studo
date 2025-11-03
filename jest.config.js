@@ -14,7 +14,7 @@ export default {
     '!**/*.d.ts',
     '!**/__tests__/**',
   ],
-  coverageDirectory: 'coverage',
+  coverageDirectory: 'coverage/server',
   coverageReporters: ['text', 'lcov', 'html'],
   extensionsToTreatAsEsm: ['.ts'],
   transform: {
